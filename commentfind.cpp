@@ -2,59 +2,83 @@
 using namespace std;
 int main()
 {
-    ifstream file("code.txt");
+    ifstream file("sample_code.c");
     if (!file.is_open())
     {
         cout<<"Error in file opening.";
         return 0;
     }
 
-    int state=0,lineNum=0;
+    int state=0,lineNumber=0,unterminatedComment=-1;
     string line;
-    while(!file.eof())
+    string multilineComment="";
+    vector<pair<int,string>>multiComment;
+
+    while( getline(file,line))
     {
-        lineNum++;
-        getline(file,line);
+        lineNumber++;
 
         if(state==1)
         {
-            int temp=line.find("*/");
+            int  commentEnd=line.find("*/");
             int index=0,last;
             while(line[index]==' ') index++;
-            temp==-1? last=line.size(): last=temp-2;
-            string out=line.substr(index,last-index+1);
-            cout<<lineNum<<" -> "<<out<<endl;
-            state=0;
+            if(commentEnd==-1)
+            {
+                string comment=line.substr(index);
+                multiComment.push_back({lineNumber,comment});
+            }
+            else
+            {
+                last=commentEnd-2;
+                string comment=line.substr(index,last-index+1);
+                multiComment.push_back({lineNumber,comment});
+
+                for(auto x:multiComment)
+                {
+                    if(x.second!="")
+                        cout<<x.first<<" -> "<<x.second<<endl;
+                }
+                state=0;
+                multiComment.clear();
+                unterminatedComment=-1;
+            }
         }
         else
         {
             int index=line.find("//");
             if(index!=-1)
             {
-                string temp=line.substr(index+2);
-                cout<<lineNum<<" -> "<<temp<<endl;
+                string comment=line.substr(index+2);
+                cout<<lineNumber<<" -> "<<comment<<endl;
                 continue;
             }
-            int index1=line.find("/*");
 
-            if(index1!=-1)
+            int indexStart=line.find("/*");
+
+            if(indexStart!=-1)
             {
-                string temp="";
-                int index2=line.find("*/");
-                if(index2!=-1)
+                if(unterminatedComment==-1)
+                    unterminatedComment=lineNumber;
+                string comment="";
+                int indexEnd=line.find("*/");
+                if(indexEnd!=-1)
                 {
-                    temp=line.substr(index1+2,index2-index1-3);
-                    // cout<<index1<<" "<<index2<<endl;
-                    //for(int i=index1+2; i<index2-1; i++)
-                    //  temp+=line[i];
+                    comment=line.substr(indexStart+2,indexEnd-indexStart-3);
+                    cout<<lineNumber<<" -> "<<comment<<endl;
+                    unterminatedComment=-1;
                 }
                 else
                 {
-                    temp=line.substr(index1+2);
+                    comment=line.substr(indexStart+2);
+                    multiComment.push_back({lineNumber,comment});
                     state=1;
                 }
-                cout<<lineNum<<" -> "<<temp<<endl;
             }
         }
+    }
+    if(state==1)
+    {
+        cout<<"Error: Unterminated comment at line "<<unterminatedComment<<endl;
     }
 }
